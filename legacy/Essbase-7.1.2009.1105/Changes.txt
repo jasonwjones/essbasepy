@@ -1,0 +1,18 @@
+Changes
+
+ver. 7.1.2009.1105
+1. Fixed a bug in fetch_desc() when no data returned (thanks to Chris Schulze for discovering this one).
+
+ver. 7.1.2009.0519
+1. Added support for Unicode (thanks to Edward Delgado for many cycles of unit and integration testing).
+
+ver. 7.1.2008.0818
+1. Changed method of locating MaxL library to (hopefully) make script Unix friendly.
+2. Added support for MaxL doubles.
+
+ver. 7.1.2008.0304
+1. New generator function rows() which allows for simpler, more pythonic data access.
+2. New optional parameter timefmt for the execute() function. Defaults to original time.asctime() format.
+
+ver. 7.1.2007.1106
+Original posting to http://essbasepy.googlecode.com/.
