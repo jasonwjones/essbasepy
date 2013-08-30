@@ -5,9 +5,8 @@ import sys
 import platform
 
 BIT64 = platform.architecture()[0] == '64bit'
-#BIT64 = True
 
-#Essbase constants
+# Essbase constants
 ESS_BYTES_PER_CHARACTER     = 4
 ESS_BYTES_FOR_TRAILING_NULL = 5
 ESS_TRUE                    = 1
