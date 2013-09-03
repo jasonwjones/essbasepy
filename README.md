@@ -52,7 +52,10 @@ mdxtest.py - sample MaxL and MDX commands
 
 ## Common Issues
 
-(insert note about env vars and Issues from Google Code)
+**maxl.MaxLInit(byref(inst)) returns 6 (Fatal Error) Essbase.isInitialized = False**
+
+Ensure that the Essbase runtime client folder containing the MaxL dll is in your PATH. As of 11.1.2.1 the folder for 64-bit is ```%EPM_ORACLE_HOME%\common\EssbaseRTC-64\11.1.2.0\bin```, for 
+32-bit it is ```%EPM_ORACLE_HOME%\common\EssbaseRTC\11.1.2.0\bin```
 
 
 ## History
