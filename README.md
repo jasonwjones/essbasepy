@@ -10,17 +10,6 @@ The Essbase Python module interfaces with Hyperion Essbase using a Python _ctype
 essbasepy files have now been consolidated down to a single distribution file. There are historical versions of essbasepy in for Essbase versions 6.5.x and 7.1.x in the legacy/ subfolder. Moving forward, they will not be maintained but will be part of this distribution for the foreseeable future.
 
 
-## Installation Sequence for 11.1.2.3
-
-It took me awhile to get essbasepy to work on my Windows 2008 R2 64-bit server with Essbase (EPM) 11.1.2.3. After digging in, a solid sequence for getting essbasepy to work appears to be as follows. This assumes that your OS is 64-bit, and the Essbase/EPM software is 64-bit. 
-
-  1. Download and install Python 2.7.5 64-bit from [python.org](http://www.python.org)
-  2. Extract essbasepy files to a folder such as C:\essbasepy. You should be able to put this anywhere but my recommendation would be to put it in a low level folder that doesn't have spaces in it.
-  3. Configure your PATH. You should have the Python folder and the Essbase DLL folder in your PATH.
-  4. Set the ESSBASEPATH environment variable. 
-  5. Install the Essbase Python module.
-  6. You should now be set.
-
 ## General Installation
 
 1. Extract files
@@ -28,6 +17,20 @@ It took me awhile to get essbasepy to work on my Windows 2008 R2 64-bit server w
 3. From the command line type: python setup.py install
 4. Test using one or more of the supplied sample Essbase/Python scripts.
 
+
+## Installation Sequence for 11.1.2.3
+
+It took me awhile to get essbasepy to work on my Windows 2008 R2 64-bit server with Essbase (EPM) 11.1.2.3. After digging in, a solid sequence for getting essbasepy to work appears to be as follows. This assumes that your OS is 64-bit, and the Essbase/EPM software is 64-bit. 
+
+  1. Download and install Python 2.7.5 64-bit from [python.org](http://www.python.org)
+  2. Extract essbasepy files to a folder such as C:\essbasepy. You should be able to put this anywhere but my recommendation would be to put it in a low level folder that doesn't have spaces in it
+  3. Configure your PATH. You should have the Python folder and the Essbase DLL folder in your PATH. The beginning of my server's PATH is ```C:\Python27_64;C:\Oracle\Middleware\EPMSystem11R1\common\EssbaseRTC-64\11.1.2.0\bin```
+  4. Set the ESSBASEPATH environment variable. 
+    1. On my Windows 2008 R2 machine this is set to ```%EPM_ORACLE_HOME%\products\Essbase\EssbaseServer```
+    2. The EPM_ORACLE_HOME variable is set to ```C:\Oracle\Middleware\EPMSystem11R1```
+  5. Install the Essbase Python module with ```python setup.py install```
+  6. You should now be set. You should be able to run your own Python scripts that import the Essbase module from wherever you run them from
+  
 
 ## Functions
 
