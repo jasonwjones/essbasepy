@@ -165,7 +165,7 @@ class Essbase:
             print ("STS:")
             print (sts)
             print (dir(inst))
-            print ("Inst") 
+            print ("Inst")
             Essbase.isInitialized = (sts == MAXL_MSGLVL_SUCCESS)
             print ("Essbase initialized: %s" % Essbase.isInitialized)
     def __del__(self):
@@ -189,14 +189,7 @@ class Essbase:
     def connect(self, user, password, host='localhost'):
         sid = c_ushort(0)
         ssnInit = maxl_ssninit_t()
-
-        print ("Starting session create...")
-        print ("User: " + user)
-        print ("Pass: " + password)
-        #print ("Card: %s" % ssnInit.Card)
-        #print (dir(ssnInit))
         sts = maxl.MaxLSessionCreate(c_char_p(host), c_char_p(user), c_char_p(password), byref(ssnInit), byref(sid))
-        print ("Came back from create")
         self.user = user
         self.sid = sid
         self.ssnInit = ssnInit
