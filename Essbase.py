@@ -151,7 +151,7 @@ class Essbase:
         self.bMdxQuery = None
 
         if not Essbase.isInitialized:
-            print ("Initialzing!")
+            print ("Initializing!")
             # Initialize MaxL API
             inst = maxl_instinit_t()
 
@@ -388,7 +388,8 @@ class Essbase:
         class output_buffer(Union):
             _fields_ = [('pdVal', c_double * MAX_REC),
                         ('pbVal', c_ubyte * MAX_REC),
-                        ('pszVal', col_t * MAX_REC)]
+                        ('pszVal', col_t * MAX_REC),
+                        ('puVal', c_ulonglong * MAX_REC)]
 
         sts = maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(pOutputDescrs))
 
@@ -416,6 +417,10 @@ class Essbase:
                     pInBuff = pBuffer.pszVal
                     Type = MAXL_DTEXT_STRING
                     Size = MAX_COL+1
+                elif pDescr.IntTyp == MAXL_DTINT_ULONG64:
+                    pInBuff = pBuffer.puVal
+                    Type = MAXL_DTEXT_ULONG64
+                    Size = 0
 
                 sts = maxl.MaxLColumnDefine(sid, c_ulong(index + 1), pInBuff, c_ushort(Size), c_ulong(Type), c_ushort(MAX_REC), None, None)
                 if sts >= MAXL_MSGLVL_ERROR:
@@ -438,6 +443,8 @@ class Essbase:
                     row.append(pBuffer.pbVal[0])
                 elif pDescr.IntTyp == MAXL_DTINT_CHAR:
                     row.append(pBuffer.pszVal[0].value)
+                elif pDescr.IntTyp == MAXL_DTINT_ULONG64:
+                    row.append(pBuffer.puVal[0])
 
         pOutputDescrs = None
         pOutputArray = None
