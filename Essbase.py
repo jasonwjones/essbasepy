@@ -174,18 +174,18 @@ class Essbase:
             sts = maxl.MaxLTerm()
             Essbase.isInitialized = False
 
-    #---------------------------- connect -----------------------------------#
-    #
-    # Creates new Essbase Session.
-    #
-    # Arguments:
-    #   User name.  Required.  Character string containing valid Essbase
-    #                          user name in whose security domain the new
-    #                          session is to be established.
-    #   Password.   Required.  Password for the user.
-    #   Host name.  Optional.  The computer name hosting the Essbase instance
-    #                          of interest.
-    #
+    """---------------------------- connect -----------------------------------
+    
+    Creates new Essbase Session.
+    
+    Arguments:
+      User name.  Required.  Character string containing valid Essbase
+                             user name in whose security domain the new
+                             session is to be established.
+      Password.   Required.  Password for the user.
+      Host name.  Optional.  The computer name hosting the Essbase instance
+                             of interest.
+    """
     def connect(self, user, password, host='localhost'):
         sid = c_ushort(0)
         ssnInit = maxl_ssninit_t()
@@ -197,27 +197,27 @@ class Essbase:
         self.sts = sts
         self.bMdxQuery = 0
 
-    #-------------------------------- do ------------------------------------#
-    #
-    # Performs a MaxL statement.
-    #
-    # Arguments:
-    #   Statement. Required. A string containing a MaxL statement to be
-    #                        passed to the server.
-    #
-    # Returns (and sets Essbase{STATUS} to):
-    #
-    #   $MAXL_STATUS {NOERR} if execution was successful.  There are likely
-    #      to be informational and feedback massages on the message stack,
-    #      which may be obtained with the pop_msg() method below.
-    #
-    #   $MAXL_STATUS {ERROR} if there was a user error.  The numbers of
-    #      the encountered errors, their levels and texts may be obtained
-    #      with the pop_msg method below.  Note, that there's likely to
-    #      be informational messages on the message stack even in if
-    #      execution was successful.  These also may be obtained via the
-    #      pop_msg call below.
-    #
+    """-------------------------------- do ------------------------------------
+    
+    Performs a MaxL statement.
+    
+    Arguments:
+      Statement. Required. A string containing a MaxL statement to be
+                           passed to the server.
+    
+    Returns (and sets Essbase{STATUS} to):
+    
+      $MAXL_STATUS {NOERR} if execution was successful.  There are likely
+         to be informational and feedback massages on the message stack,
+         which may be obtained with the pop_msg() method below.
+    
+      $MAXL_STATUS {ERROR} if there was a user error.  The numbers of
+         the encountered errors, their levels and texts may be obtained
+         with the pop_msg method below.  Note, that there's likely to
+         be informational messages on the message stack even in if
+         execution was successful.  These also may be obtained via the
+         pop_msg call below.
+    """
     def do(self, statement):
         sid, ssnInit = self.sid, self.ssnInit
         if not (sid and ssnInit):
@@ -250,29 +250,29 @@ class Essbase:
 
         return sts
 
-    #---------------------------- pop_msg -----------------------------------#
-    #
-    # Pops next Essbase or MaxL status message from MaxL message stack.
-    #
-    # Each invocation of the "do" method above results in a stack of status
-    # messages.  This stack is unwound by repeatedly calling this function
-    # until it returns nothing.  It's okay for a program to ignore the
-    # message stack, or only unwind it partially.  The next call to "do" will
-    # clear left-over messages.
-    #
-    # There is likely to be a number of messages on the stack even after a
-    # successful execution.  In most cases, a program will only need
-    # to know if the execution of the last "do" was successful, which is
-    # indicated by the return value from "do".
-    #
-    # When the message stack is empty the return list elements are undefined
-    # and Essbase{STATUS} is set to $MAXL_STATUS{END_OF_DATA}.
-    #
-    # Arguments: None
-    #
-    # Returns: List of form:
-    #   (<message_number>, <message_level>, <message_text>)
-    #
+    """---------------------------- pop_msg -----------------------------------
+    
+    Pops next Essbase or MaxL status message from MaxL message stack.
+    
+    Each invocation of the "do" method above results in a stack of status
+    messages.  This stack is unwound by repeatedly calling this function
+    until it returns nothing.  It's okay for a program to ignore the
+    message stack, or only unwind it partially.  The next call to "do" will
+    clear left-over messages.
+    
+    There is likely to be a number of messages on the stack even after a
+    successful execution.  In most cases, a program will only need
+    to know if the execution of the last "do" was successful, which is
+    indicated by the return value from "do".
+    
+    When the message stack is empty the return list elements are undefined
+    and Essbase{STATUS} is set to $MAXL_STATUS{END_OF_DATA}.
+    
+    Arguments: None
+    
+    Returns: List of form:
+      (<message_number>, <message_level>, <message_text>)
+    """
     def pop_msg(self):
         sid, ssnInit, sts = self.sid, self.ssnInit, self.sts
         if not (sid and ssnInit):
@@ -307,11 +307,11 @@ class Essbase:
 
         return msgno, msglevel, msgstr
 
-    #------------------------- fetch_desc ------------------------------#
-    #
-    # Returns reference to list of column names in the output table
-    # and a reference to the list of column types in the output table.
-    #
+    """------------------------- fetch_desc ------------------------------
+    
+    Returns reference to list of column names in the output table
+    and a reference to the list of column types in the output table.
+    """
     def fetch_desc(self):
         col_names = []
         col_types = []
@@ -342,19 +342,19 @@ class Essbase:
 
         return tuple(col_names), tuple(col_types)
 
-    #------------------------- fetch_row ------------------------------#
-    #
-    # Returns a reference to a row of query results in output table as a
-    # list and a reference to the data types of the query result values
-    # as a list.
-    # Essbase->{STATUS} is set to either $MAXL_STATUS{NOERR}, on
-    # success, or $MAXL_STATUS{END_OF_DATA}, if there were no rows to
-    # fetch, or $MAXL_STATUS{ERROR} if a user error has occured.
-    #
-    # A row of record is defined as
-    #    { val[0], val[1], ... , val[NUM_OF_FIELDS-1] } }
-    # Row numbers are counted cardinally from 0:
-    #
+    """------------------------- fetch_row ------------------------------
+    
+    Returns a reference to a row of query results in output table as a
+    list and a reference to the data types of the query result values
+    as a list.
+    Essbase->{STATUS} is set to either $MAXL_STATUS{NOERR}, on
+    success, or $MAXL_STATUS{END_OF_DATA}, if there were no rows to
+    fetch, or $MAXL_STATUS{ERROR} if a user error has occured.
+    
+    A row of record is defined as
+       { val[0], val[1], ... , val[NUM_OF_FIELDS-1] } }
+    Row numbers are counted cardinally from 0:
+    """
     def fetch_row(self):
         row = []
         sid, ssnInit, numFlds, bMdxQuery = self.sid, self.ssnInit, self.numFlds, self.bMdxQuery
@@ -375,7 +375,7 @@ class Essbase:
         self.sts = sts
         return row
 
-    #----------------------- _MaxlOutputNextRecord --------------------#
+    """----------------------- _MaxlOutputNextRecord --------------------"""
     def _MaxlOutputNextRecord(self, sid, ssnInit, numFlds):
         row = []
         pDescr = maxl_column_descr_t()
@@ -450,19 +450,19 @@ class Essbase:
         pOutputArray = None
         return sts, row
 
-    #-------------------- _MaxlMDXOutputNextRecord --------------------#
-    #
-    # Description
-    #   Returns pOutput->ulCurRow'th row of output data.
-    #
-    # Parameters
-    #   SessionId- in    - MaxL Session id.
-    #   ppRecord - out   - Pointer to the buffer which receives the record
-    #                      values.
-    #
-    # Returns
-    #   MAXL_NOERR, MAXL_END_OF_DATA, MAXL_ERROR.
-
+    """-------------------- _MaxlMDXOutputNextRecord --------------------
+    
+    Description
+      Returns pOutput->ulCurRow'th row of output data.
+    
+    Parameters
+      SessionId- in    - MaxL Session id.
+      ppRecord - out   - Pointer to the buffer which receives the record
+                          values.
+    
+    Returns
+      MAXL_NOERR, MAXL_END_OF_DATA, MAXL_ERROR.
+    """
     def _MaxlMDXOutputNextRecord(self, sid, numFlds):
         row = []
         pHeader_t = POINTER(maxl_mdxoutputheader_t)
@@ -496,12 +496,12 @@ class Essbase:
 
         return sts, row
 
-    #----------------------------- is_mdx -------------------------------#
-    #
-    # This function can be called after a call to do() in case different
-    # output processing is desired for mdx query output than from
-    # MaxL command output
-    #
+    """----------------------------- is_mdx -------------------------------
+    
+    This function can be called after a call to do() in case different
+    output processing is desired for mdx query output than from
+    MaxL command output
+    """
     def is_mdx(self):
         sid, ssnInit, sts = self.sid, self.ssnInit, self.sts
         if not (sid and ssnInit):
@@ -509,10 +509,10 @@ class Essbase:
 
         return ssnInit.bMdxQuery
 
-    #----------------------------- disconnect -------------------------------#
-    #
-    # Terminates a MaxL session and the associated Essbase session.
-    #
+    """----------------------------- disconnect -------------------------------
+    
+    Terminates a MaxL session and the associated Essbase session.
+    """
     def disconnect(self):
         sid = self.sid
         if not sid:
@@ -529,10 +529,10 @@ class Essbase:
 
         return sts
 
-    # -------------------------------- rows ----------------------------------#
-    #
-    # Generator that loops through output returned by Essbase 
-    #
+    """-------------------------------- rows ----------------------------------
+    
+    Generator that loops through output returned by Essbase 
+    """
     def rows(self, value=None):
         if not self.numFlds:
             raise StopIteration
@@ -547,10 +547,10 @@ class Essbase:
             except Exception as e:
                 value = e
 
-    # --------------------------------- tdf ---------------------------------#
-    #
-    # Returns a result set in the form of a tab-delimited file.
-    #
+    """--------------------------------- tdf ---------------------------------
+    
+    Returns a result set in the form of a tab-delimited file.
+    """
     def tdf(self):
         # setup the header
         name, dt = self.fetch_desc()
@@ -577,10 +577,10 @@ class Essbase:
 
         return tbl
 
-    # -------------------------------- msgs ----------------------------------#
-    #
-    # Returns a message list that resulted from executing a MaxL statement.
-    #
+    """-------------------------------- msgs ----------------------------------
+    
+    Returns a message list that resulted from executing a MaxL statement.
+    """
     def msgs(self, output=sys.stdout):
 
         msgno, level, msg = self.pop_msg()
@@ -602,10 +602,10 @@ class Essbase:
 
         print ('')
 
-    # ------------------------------- execute -------------------------------#
-    #
-    # Execute a MaxL statement and print resulting output.
-    #
+    """------------------------------- execute -------------------------------
+    
+    Execute a MaxL statement and print resulting output.
+    """
     def execute(self, stmt, output=sys.stdout, timefmt=None):
         # format MaxL statement for output
         stmt = stmt.replace("\t", "")
