@@ -189,7 +189,7 @@ class Essbase:
     def connect(self, user, password, host='localhost'):
         sid = c_ushort(0)
         ssnInit = maxl_ssninit_t()
-        sts = maxl.MaxLSessionCreate(c_char_p(bytes(host, 'utf-8')), c_char_p(bytes(user, 'utf-8')), c_char_p(bytes(password, 'utf-8')), byref(ssnInit), byref(sid))
+        sts = maxl.MaxLSessionCreate(c_char_p(host.encode('utf-8')), c_char_p(user.encode('utf-8')), c_char_p(password.encode('utf-8')), byref(ssnInit), byref(sid))
         self.user = user
         self.sid = sid
         self.ssnInit = ssnInit
@@ -225,9 +225,9 @@ class Essbase:
 
         # execute the statement command
         if ESS_UTF:
-            sts = maxl.MaxLExec(sid, c_char_p(bytes(statement, 'utf-8')), c_ulong(MAXL_OPMODE_UTF))
+            sts = maxl.MaxLExec(sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
         else:
-            sts = maxl.MaxLExec(sid, c_char_p(bytes(statement, 'utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
+            sts = maxl.MaxLExec(sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
         self.sts = sts
         self.bMdxQuery = self.is_mdx()
 
