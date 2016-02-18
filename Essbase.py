@@ -546,6 +546,7 @@ class Essbase:
                 raise
             except Exception as e:
                 value = e
+                raise
 
     """--------------------------------- tdf ---------------------------------
     
