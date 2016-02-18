@@ -189,7 +189,7 @@ class Essbase:
     def connect(self, user, password, host='localhost'):
         sid = c_ushort(0)
         ssnInit = maxl_ssninit_t()
-        sts = maxl.MaxLSessionCreate(c_char_p(host), c_char_p(user), c_char_p(password), byref(ssnInit), byref(sid))
+        sts = maxl.MaxLSessionCreate(c_char_p(bytes(host, 'utf-8')), c_char_p(bytes(user, 'utf-8')), c_char_p(bytes(password, 'utf-8')), byref(ssnInit), byref(sid))
         self.user = user
         self.sid = sid
         self.ssnInit = ssnInit
@@ -225,9 +225,9 @@ class Essbase:
 
         # execute the statement command
         if ESS_UTF:
-            sts = maxl.MaxLExec(sid, c_char_p(statement), c_ulong(MAXL_OPMODE_UTF))
+            sts = maxl.MaxLExec(sid, c_char_p(bytes(statement, 'utf-8')), c_ulong(MAXL_OPMODE_UTF))
         else:
-            sts = maxl.MaxLExec(sid, c_char_p(statement), c_ulong(MAXL_OPMODE_DEFAULT))
+            sts = maxl.MaxLExec(sid, c_char_p(bytes(statement, 'utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
         self.sts = sts
         self.bMdxQuery = self.is_mdx()
 
@@ -399,7 +399,7 @@ class Essbase:
 
             # memset(pOutputArray, 0, sizeof(pOutputArray))
             ppOutputArray = (c_char * sizeof(pOutputArray)).from_address(addressof(pOutputArray))
-            ppOutputArray.value = '\0' * sizeof(pOutputArray)
+            ppOutputArray.value = b'\0' * sizeof(pOutputArray)
 
             for index in range(numFlds):
                 pBuffer = pOutputArray[index]
@@ -597,10 +597,10 @@ class Essbase:
                 msglvl = "FATAL"
             else:
                 msglvl = str(level)
-            print >> output, "%8s - %7d - %s." % (msglvl, msgno, msg)
+            print ("%8s - %7d - %s." % (msglvl, msgno, bytes.decode(msg)))
             msgno, level, msg = self.pop_msg()
 
-        print >> output,''
+        print ('')
 
     # ------------------------------- execute -------------------------------#
     #
@@ -616,8 +616,9 @@ class Essbase:
             timestamp = time.strftime(timefmt)
         else:
             timestamp = time.asctime()
-        print >> output, timestamp
-        print >> output, "MAXL> %s;\n" % "\n".join(out)
+        
+        print (timestamp)
+        print ("MAXL> %s;\n" % "\n".join(out))
 
         # execute MaxL statement
         sts = self.do(stmt)
@@ -627,9 +628,9 @@ class Essbase:
             # dump status messages
             self.msgs(output)
 
-            print >> output, "Execution of [%s] failed with status %d" % (stmt, sts)
+            print ("Execution of [%s] failed with status %d" % (stmt, sts))
         elif self.numFlds:
-            print >> output, self.tdf()
+            print (self.tdf())
 
         # dump status messages
         self.msgs(output)
