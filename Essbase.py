@@ -484,11 +484,10 @@ class Essbase:
     MaxL command output
     """
     def is_mdx(self):
-        sid, ssnInit, sts = self.sid, self.ssnInit, self.sts
-        if not (sid and ssnInit):
+        if not (self.sid and self.ssnInit):
             return None
 
-        return ssnInit.bMdxQuery
+        return self.ssnInit.bMdxQuery
 
     """----------------------------- disconnect -------------------------------
     
