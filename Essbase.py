@@ -207,36 +207,35 @@ class Essbase:
          pop_msg call below.
     """
     def do(self, statement):
-        sid, ssnInit = self.sid, self.ssnInit
-        if not (sid and ssnInit):
+        if not (self.sid and self.ssnInit):
             return MAXL_MSGLVL_SESSION
 
         # execute the statement command
         if ESS_UTF:
-            sts = maxl.MaxLExec(sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
+            self.sts = maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
         else:
-            sts = maxl.MaxLExec(sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
-        self.sts = sts
+            self.sts = maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
+        
         self.bMdxQuery = self.is_mdx()
 
         if self.bMdxQuery:
             numFlds = c_long(0)
             numRows = c_long(0)
-            sts = maxl.MaxlMDXOutputSize(sid, byref(numFlds), byref(numRows))
-            self.sts = sts
-            if sts > MAXL_MSGLVL_ERROR:
+            self.sts = maxl.MaxlMDXOutputSize(self.sid, byref(numFlds), byref(numRows))
+            
+            if self.sts > MAXL_MSGLVL_ERROR:
                 self.numFlds = None
                 self.numRows = None
             else:
                 self.numFlds = int(numFlds.value)
                 self.numRows = int(numRows.value)
         else:
-            if sts > MAXL_MSGLVL_ERROR:
+            if self.sts > MAXL_MSGLVL_ERROR:
                 self.numFlds = None
             else:
                 self.numFlds = self.ssnInit.ExecArity
 
-        return sts
+        return self.sts
 
     """---------------------------- pop_msg -----------------------------------
     
