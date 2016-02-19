@@ -534,7 +534,7 @@ class Essbase:
     def tdf(self):
         # setup the header
         name, dt = self.fetch_desc()
-        tbl = "\t".join(name) + "\n"
+        tbl = "\t".join(map(str, name)) + "\n"
         line = ['-' * len(column) for column in name]
         tbl = tbl + "\t".join(line) + "\n"
 
