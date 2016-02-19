@@ -215,10 +215,8 @@ class Essbase:
             self.sts = maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
         else:
             self.sts = maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
-        
-        self.bMdxQuery = self.is_mdx()
 
-        if self.bMdxQuery:
+        if self.is_mdx():
             numFlds = c_long(0)
             numRows = c_long(0)
             self.sts = maxl.MaxlMDXOutputSize(self.sid, byref(numFlds), byref(numRows))
@@ -534,7 +532,7 @@ class Essbase:
     def tdf(self):
         # setup the header
         name, dt = self.fetch_desc()
-        tbl = "\t".join(map(str, name)) + "\n"
+        tbl = "\t".join([x.decode() for x in name]) + "\n"
         line = ['-' * len(column) for column in name]
         tbl = tbl + "\t".join(line) + "\n"
 
@@ -549,7 +547,10 @@ class Essbase:
                     else:
                         record.append('TRUE')
                 else:
-                    record.append(str(column))
+                    if type(column) == bytes:
+                        record.append(column.decode())
+                    else:
+                        record.append(str(column))
                 idx += 1
             tbl = tbl + "\t".join(record) + "\n"
 
@@ -577,7 +578,7 @@ class Essbase:
                 msglvl = "FATAL"
             else:
                 msglvl = str(level)
-            print ("%8s - %7d - %s." % (msglvl, msgno, bytes.decode(msg)))
+            print ("%8s - %7d - %s." % (msglvl, msgno, msg.decode()))
             msgno, level, msg = self.pop_msg()
 
         print ('')
