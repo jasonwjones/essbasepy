@@ -140,7 +140,7 @@ __maxldll = find_library('essmaxlu')
 maxl = cdll.LoadLibrary(__maxldll)
 
 class Essbase:
-    isInitialized = False
+    
     def __init__(self):
         self.user = None
         self.sid = None
@@ -150,24 +150,15 @@ class Essbase:
         self.sts = None
         self.bMdxQuery = None
 
-        if not Essbase.isInitialized:
-            print ("Initializing!")
-            # Initialize MaxL API
-            inst = maxl_instinit_t()
+        # Initialize MaxL API
+        inst = maxl_instinit_t()
 
-            # memset(InstInit, 0, sizeof(MAXL_INSTINIT_T))
-            #pinst = (c_char * sizeof(inst)).from_address(addressof(inst))
-            #pinst.value = b'\0' * sizeof(inst)
-            if ESS_UTF:
-                inst.bUTFInput = ESS_TRUE
+        if ESS_UTF:
+            inst.bUTFInput = ESS_TRUE
 
-            sts = maxl.MaxLInit(byref(inst))
-            print ("STS:")
-            print (sts)
-            print (dir(inst))
-            print ("Inst")
-            Essbase.isInitialized = (sts == MAXL_MSGLVL_SUCCESS)
-            print ("Essbase initialized: %s" % Essbase.isInitialized)
+        sts = maxl.MaxLInit(byref(inst))
+        Essbase.isInitialized = (sts == MAXL_MSGLVL_SUCCESS)
+        
     def __del__(self):
         if Essbase.isInitialized:
             # Terminate MaxL API
