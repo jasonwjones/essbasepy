@@ -494,20 +494,19 @@ class Essbase:
     Terminates a MaxL session and the associated Essbase session.
     """
     def disconnect(self):
-        sid = self.sid
-        if not sid:
+        if not self.sid:
             return MAXL_MSGLVL_SESSION
 
-        sts = maxl.MaxLSessionDestroy(sid)
+        self.sts = maxl.MaxLSessionDestroy(self.sid)
 
-        if sts < MAXL_MSGLVL_ERROR:
+        if self.sts < MAXL_MSGLVL_ERROR:
             self.user = None
             self.sid = None
             self.ssnInit = None
             self.numFlds = None
             self.sts = None
 
-        return sts
+        return self.sts
 
     """-------------------------------- rows ----------------------------------
     
