@@ -339,22 +339,21 @@ class Essbase:
     """
     def fetch_row(self):
         row = []
-        sid, ssnInit, numFlds, bMdxQuery = self.sid, self.ssnInit, self.numFlds, self.bMdxQuery
-        if not (sid and ssnInit):
+        
+        if not (self.sid and self.ssnInit):
             return MAXL_MSGLVL_SESSION
 
-        if not numFlds:
+        if not self.numFlds:
             return row
 
-        if bMdxQuery:
-            sts, row = self._MaxlMDXOutputNextRecord(sid, numFlds)
+        if self.bMdxQuery:
+            self.sts, row = self._MaxlMDXOutputNextRecord(self.sid, self.numFlds)
         else:
-            sts, row = self._MaxlOutputNextRecord(sid, ssnInit, numFlds)
+            self.sts, row = self._MaxlOutputNextRecord(self.sid, self.ssnInit, self.numFlds)
 
-        if sts == MAXL_MSGLVL_END_OF_DATA:
-            sts = MAXL_MSGLVL_SUCCESS
+        if self.sts == MAXL_MSGLVL_END_OF_DATA:
+            self.sts = MAXL_MSGLVL_SUCCESS
 
-        self.sts = sts
         return row
 
     """----------------------- _MaxlOutputNextRecord --------------------"""
