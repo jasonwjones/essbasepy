@@ -178,14 +178,11 @@ class Essbase:
                              of interest.
     """
     def connect(self, user, password, host='localhost'):
-        sid = c_ushort(0)
-        ssnInit = maxl_ssninit_t()
-        sts = maxl.MaxLSessionCreate(c_char_p(host.encode('utf-8')), c_char_p(user.encode('utf-8')), c_char_p(password.encode('utf-8')), byref(ssnInit), byref(sid))
+        self.sid = c_ushort(0)
+        self.ssnInit = maxl_ssninit_t()
+        self.sts = maxl.MaxLSessionCreate(c_char_p(host.encode('utf-8')), c_char_p(user.encode('utf-8')), c_char_p(password.encode('utf-8')), byref(self.ssnInit), byref(self.sid))
         self.user = user
-        self.sid = sid
-        self.ssnInit = ssnInit
         self.numFlds = 0
-        self.sts = sts
         self.bMdxQuery = 0
 
     """-------------------------------- do ------------------------------------
