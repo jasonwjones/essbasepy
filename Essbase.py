@@ -261,35 +261,31 @@ class Essbase:
       (<message_number>, <message_level>, <message_text>)
     """
     def pop_msg(self):
-        sid, ssnInit, sts = self.sid, self.ssnInit, self.sts
-        if not (sid and ssnInit):
+        if not (self.sid and self.ssnInit):
             return None, None, None
 
         msgno = msglevel = arity = 0
-        oldSts = self.sts
         done = False
         getAnotherMessage = True
 
         while getAnotherMessage:
             msgstr = ''
-            if oldSts <= MAXL_MSGLVL_ERROR:
+            if self.sts <= MAXL_MSGLVL_ERROR:
                 msgno, msglevel, msgstr, arity = self.ssnInit.MsgNumber, self.ssnInit.MsgLevel, self.ssnInit.MsgText, self.ssnInit.ExecArity
                 if not (not arity and msgno == MAXL_MSGNO_COL_PREP_NUM):
                     getAnotherMessage = False
                 else:
                     getAnotherMessage = True
-            elif oldSts == MAXL_MSGLVL_END_OF_DATA:
+            elif self.sts == MAXL_MSGLVL_END_OF_DATA:
                 done = True
                 getAnotherMessage = False
 
             if not done:
-                sts = maxl.MaxLMessageFetch(sid)
+                self.sts = maxl.MaxLMessageFetch(self.sid)
                 if getAnotherMessage:
                     msgno = msglevel = arity = 0
-                    oldSts = sts
 
-        self.sts = sts
-        if sts > MAXL_MSGLVL_ERROR and sts != MAXL_MSGLVL_END_OF_DATA:
+        if self.sts > MAXL_MSGLVL_ERROR and self.sts != MAXL_MSGLVL_END_OF_DATA:
             msgno, msglevel, msgstr = None, None, None
 
         return msgno, msglevel, msgstr
@@ -303,27 +299,26 @@ class Essbase:
         col_names = []
         col_types = []
 
-        sid, numFlds, numRows, bMdxQuery = self.sid, self.numFlds, self.numRows, self.bMdxQuery
-        if not sid:
+        if not self.sid:
             return MAXL_MSGLVL_SESSION
 
-        if not numFlds:
+        if not self.numFlds:
             return tuple(col_names), tuple(col_types)
 
-        if bMdxQuery:
+        if self.bMdxQuery:
             pHeader_t = POINTER(maxl_mdxoutputheader_t)
             pHeader = pHeader_t()
-            sts = maxl.MaxlMDXOutputDescribe(sid, byref(pHeader))
-            if sts < MAXL_MSGLVL_ERROR:
-                for index in range(numFlds):
+            self.sts = maxl.MaxlMDXOutputDescribe(self.sid, byref(pHeader))
+            if self.sts < MAXL_MSGLVL_ERROR:
+                for index in range(self.numFlds):
                     col_names.append(pHeader[index].sName)
                     col_types.append(pHeader[index].Type)
         else:
-            col_array = maxl_column_descr_t * numFlds
+            col_array = maxl_column_descr_t * self.numFlds
             cols = col_array()
-            sts = maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(cols))
-            if sts < MAXL_MSGLVL_ERROR:
-                for index in range(numFlds):
+            self.sts = maxl.MaxLOutputDescribe(self.sid, c_ulong(1), c_ulong(self.numFlds), byref(cols))
+            if self.sts < MAXL_MSGLVL_ERROR:
+                for index in range(self.numFlds):
                     col_names.append(cols[index].Name)
                     col_types.append(cols[index].IntTyp)
 
