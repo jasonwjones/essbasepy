@@ -303,7 +303,7 @@ class Essbase:
         if not self.numFlds:
             return tuple(col_names), tuple(col_types)
 
-        if self.bMdxQuery:
+        if self.is_mdx():
             pHeader_t = POINTER(maxl_mdxoutputheader_t)
             pHeader = pHeader_t()
             self.sts = maxl.MaxlMDXOutputDescribe(self.sid, byref(pHeader))
