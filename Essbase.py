@@ -149,11 +149,25 @@ class Essbase:
         self.sts = None
         self.bMdxQuery = None
 
+        # Check for environment variables needed for essbase
+        try:
+            os.environ["ESSBASEPATH"]
+            os.environ["PATH"]
+        except KeyError as e:
+            print ("environment variable {VAR} not set".format(VAR=e))
+            raise SystemExit
+        
         # Initialize MaxL API
         inst = maxl_instinit_t()
         
-        __maxldll = find_library('essmaxl')
-        self.maxl = cdll.LoadLibrary(__maxldll)
+        # Try to find and load the DLL
+        __maxldll = find_library('essmaxlu')
+        if __maxldll:
+            print ("Using Maxl DLL in {DLLpath}".format(DLLpath = __maxldll))
+            self.maxl = cdll.LoadLibrary(__maxldll)
+        else:
+            print ("maxl DLL not found")
+            raise SystemExit
 
         if ESS_UTF:
             inst.bUTFInput = ESS_TRUE
