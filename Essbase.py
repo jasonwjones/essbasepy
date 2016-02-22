@@ -3,6 +3,7 @@ from ctypes.util import find_library
 import time
 import sys
 import platform
+import os
 
 BIT64 = platform.architecture()[0] == '64bit'
 
@@ -136,8 +137,6 @@ class maxl_mdxoutputheader_t(Structure):
     _fields_ = [('Type', MAXL_MDXCOLUMNTYPE_T),
                 ('sName', (c_char * MAXL_MDXCELLSTRSZ))]
 
-__maxldll = find_library('essmaxlu')
-maxl = cdll.LoadLibrary(__maxldll)
 
 class Essbase:
     
@@ -152,17 +151,20 @@ class Essbase:
 
         # Initialize MaxL API
         inst = maxl_instinit_t()
+        
+        __maxldll = find_library('essmaxl')
+        self.maxl = cdll.LoadLibrary(__maxldll)
 
         if ESS_UTF:
             inst.bUTFInput = ESS_TRUE
 
-        sts = maxl.MaxLInit(byref(inst))
+        sts = self.maxl.MaxLInit(byref(inst))
         Essbase.isInitialized = (sts == MAXL_MSGLVL_SUCCESS)
         
     def __del__(self):
         if Essbase.isInitialized:
             # Terminate MaxL API
-            sts = maxl.MaxLTerm()
+            sts = self.maxl.MaxLTerm()
             Essbase.isInitialized = False
 
     """---------------------------- connect -----------------------------------
@@ -180,7 +182,7 @@ class Essbase:
     def connect(self, user, password, host='localhost'):
         self.sid = c_ushort(0)
         self.ssnInit = maxl_ssninit_t()
-        self.sts = maxl.MaxLSessionCreate(c_char_p(host.encode('utf-8')), c_char_p(user.encode('utf-8')), c_char_p(password.encode('utf-8')), byref(self.ssnInit), byref(self.sid))
+        self.sts = self.maxl.MaxLSessionCreate(c_char_p(host.encode('utf-8')), c_char_p(user.encode('utf-8')), c_char_p(password.encode('utf-8')), byref(self.ssnInit), byref(self.sid))
         self.user = user
         self.numFlds = 0
         self.bMdxQuery = 0
@@ -212,14 +214,14 @@ class Essbase:
 
         # execute the statement command
         if ESS_UTF:
-            self.sts = maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
+            self.sts = self.maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
         else:
-            self.sts = maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
+            self.sts = self.maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
 
         if self.is_mdx():
             numFlds = c_long(0)
             numRows = c_long(0)
-            self.sts = maxl.MaxlMDXOutputSize(self.sid, byref(numFlds), byref(numRows))
+            self.sts = self.maxl.MaxlMDXOutputSize(self.sid, byref(numFlds), byref(numRows))
             
             if self.sts > MAXL_MSGLVL_ERROR:
                 self.numFlds = None
@@ -279,7 +281,7 @@ class Essbase:
                 getAnotherMessage = False
 
             if not done:
-                self.sts = maxl.MaxLMessageFetch(self.sid)
+                self.sts = self.maxl.MaxLMessageFetch(self.sid)
                 if getAnotherMessage:
                     msgno = msglevel = arity = 0
 
@@ -306,7 +308,7 @@ class Essbase:
         if self.is_mdx():
             pHeader_t = POINTER(maxl_mdxoutputheader_t)
             pHeader = pHeader_t()
-            self.sts = maxl.MaxlMDXOutputDescribe(self.sid, byref(pHeader))
+            self.sts = self.maxl.MaxlMDXOutputDescribe(self.sid, byref(pHeader))
             if self.sts < MAXL_MSGLVL_ERROR:
                 for index in range(self.numFlds):
                     col_names.append(pHeader[index].sName)
@@ -314,7 +316,7 @@ class Essbase:
         else:
             col_array = maxl_column_descr_t * self.numFlds
             cols = col_array()
-            self.sts = maxl.MaxLOutputDescribe(self.sid, c_ulong(1), c_ulong(self.numFlds), byref(cols))
+            self.sts = self.maxl.MaxLOutputDescribe(self.sid, c_ulong(1), c_ulong(self.numFlds), byref(cols))
             if self.sts < MAXL_MSGLVL_ERROR:
                 for index in range(self.numFlds):
                     col_names.append(cols[index].Name)
@@ -370,7 +372,7 @@ class Essbase:
                         ('pszVal', col_t * MAX_REC),
                         ('puVal', c_ulonglong * MAX_REC)]
 
-        sts = maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(pOutputDescrs))
+        sts = self.maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(pOutputDescrs))
 
         if sts < MAXL_MSGLVL_ERROR:
             buffer_array = output_buffer * numFlds
@@ -401,12 +403,12 @@ class Essbase:
                     Type = MAXL_DTEXT_ULONG64
                     Size = 0
 
-                sts = maxl.MaxLColumnDefine(sid, c_ulong(index + 1), pInBuff, c_ushort(Size), c_ulong(Type), c_ushort(MAX_REC), None, None)
+                sts = self.maxl.MaxLColumnDefine(sid, c_ulong(index + 1), pInBuff, c_ushort(Size), c_ulong(Type), c_ushort(MAX_REC), None, None)
                 if sts >= MAXL_MSGLVL_ERROR:
                     pOutputDescrs = pOutputArray = None
                     return sts, None
 
-            sts = maxl.MaxLOutputFetch(sid, c_ulong(MAXL_OPMODE_DEFAULT))
+            sts = self.maxl.MaxLOutputFetch(sid, c_ulong(MAXL_OPMODE_DEFAULT))
             if sts == MAXL_MSGLVL_ERROR or sts == MAXL_MSGLVL_END_OF_DATA:
                 return sts, None
             elif sts > MAXL_MSGLVL_ERROR:
@@ -452,9 +454,9 @@ class Essbase:
         ppRecordAry = ESS_PVOID_T * numFlds
         ppRecord = ppRecordAry()
 
-        sts = maxl.MaxlMDXOutputNextRecord(sid, ppRecord)
+        sts = self.maxl.MaxlMDXOutputNextRecord(sid, ppRecord)
         if sts == MAXL_MSGLVL_SUCCESS:
-            sts = maxl.MaxlMDXOutputDescribe(sid, byref(pHeader))
+            sts = self.maxl.MaxlMDXOutputDescribe(sid, byref(pHeader))
             if sts == MAXL_MSGLVL_SUCCESS:
                 for index in range(numFlds):
                     fldType = pHeader[index].Type
@@ -495,7 +497,7 @@ class Essbase:
         if not self.sid:
             return MAXL_MSGLVL_SESSION
 
-        self.sts = maxl.MaxLSessionDestroy(self.sid)
+        self.sts = self.maxl.MaxLSessionDestroy(self.sid)
 
         if self.sts < MAXL_MSGLVL_ERROR:
             self.user = None
