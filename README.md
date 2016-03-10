@@ -64,6 +64,7 @@ Ensure that the Essbase runtime client folder containing the MaxL dll is in your
 
 * HUGE number of update to cleanup Essbasepy for Python 3 and otherwise cleanup the code significantly
 * HUGE thank you to Kevin (Github user nurzen) for all of these updates!
+* If using Python 2.x you may need to use an older (the previous) version of Essbasepy 
 
 ### August 30, 2013
 
