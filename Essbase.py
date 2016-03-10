@@ -3,6 +3,7 @@ from ctypes.util import find_library
 import time
 import sys
 import platform
+import os
 
 BIT64 = platform.architecture()[0] == '64bit'
 
@@ -136,11 +137,9 @@ class maxl_mdxoutputheader_t(Structure):
     _fields_ = [('Type', MAXL_MDXCOLUMNTYPE_T),
                 ('sName', (c_char * MAXL_MDXCELLSTRSZ))]
 
-__maxldll = find_library('essmaxlu')
-maxl = cdll.LoadLibrary(__maxldll)
 
 class Essbase:
-    isInitialized = False
+    
     def __init__(self):
         self.user = None
         self.sid = None
@@ -150,232 +149,228 @@ class Essbase:
         self.sts = None
         self.bMdxQuery = None
 
-        if not Essbase.isInitialized:
-            print ("Initializing!")
-            # Initialize MaxL API
-            inst = maxl_instinit_t()
+        # Check for environment variables needed for essbase
+        try:
+            os.environ["ESSBASEPATH"]
+            os.environ["PATH"]
+        except KeyError as e:
+            print ("environment variable {VAR} not set".format(VAR=e))
+            raise SystemExit
+        
+        # Initialize MaxL API
+        inst = maxl_instinit_t()
+        
+        # Try to find and load the DLL
+        __maxldll = find_library('essmaxlu')
+        if __maxldll:
+            print ("Using Maxl DLL in {DLLpath}".format(DLLpath = __maxldll))
+            self.maxl = cdll.LoadLibrary(__maxldll)
+        else:
+            print ("maxl DLL not found")
+            raise SystemExit
 
-            # memset(InstInit, 0, sizeof(MAXL_INSTINIT_T))
-            #pinst = (c_char * sizeof(inst)).from_address(addressof(inst))
-            #pinst.value = b'\0' * sizeof(inst)
-            if ESS_UTF:
-                inst.bUTFInput = ESS_TRUE
+        if ESS_UTF:
+            inst.bUTFInput = ESS_TRUE
 
-            sts = maxl.MaxLInit(byref(inst))
-            print ("STS:")
-            print (sts)
-            print (dir(inst))
-            print ("Inst")
-            Essbase.isInitialized = (sts == MAXL_MSGLVL_SUCCESS)
-            print ("Essbase initialized: %s" % Essbase.isInitialized)
+        sts = self.maxl.MaxLInit(byref(inst))
+        Essbase.isInitialized = (sts == MAXL_MSGLVL_SUCCESS)
+        
     def __del__(self):
         if Essbase.isInitialized:
             # Terminate MaxL API
-            sts = maxl.MaxLTerm()
+            sts = self.maxl.MaxLTerm()
             Essbase.isInitialized = False
 
-    #---------------------------- connect -----------------------------------#
-    #
-    # Creates new Essbase Session.
-    #
-    # Arguments:
-    #   User name.  Required.  Character string containing valid Essbase
-    #                          user name in whose security domain the new
-    #                          session is to be established.
-    #   Password.   Required.  Password for the user.
-    #   Host name.  Optional.  The computer name hosting the Essbase instance
-    #                          of interest.
-    #
+    """---------------------------- connect -----------------------------------
+    
+    Creates new Essbase Session.
+    
+    Arguments:
+      User name.  Required.  Character string containing valid Essbase
+                             user name in whose security domain the new
+                             session is to be established.
+      Password.   Required.  Password for the user.
+      Host name.  Optional.  The computer name hosting the Essbase instance
+                             of interest.
+    """
     def connect(self, user, password, host='localhost'):
-        sid = c_ushort(0)
-        ssnInit = maxl_ssninit_t()
-        sts = maxl.MaxLSessionCreate(c_char_p(host), c_char_p(user), c_char_p(password), byref(ssnInit), byref(sid))
+        self.sid = c_ushort(0)
+        self.ssnInit = maxl_ssninit_t()
+        self.sts = self.maxl.MaxLSessionCreate(c_char_p(host.encode('utf-8')), c_char_p(user.encode('utf-8')), c_char_p(password.encode('utf-8')), byref(self.ssnInit), byref(self.sid))
         self.user = user
-        self.sid = sid
-        self.ssnInit = ssnInit
         self.numFlds = 0
-        self.sts = sts
         self.bMdxQuery = 0
 
-    #-------------------------------- do ------------------------------------#
-    #
-    # Performs a MaxL statement.
-    #
-    # Arguments:
-    #   Statement. Required. A string containing a MaxL statement to be
-    #                        passed to the server.
-    #
-    # Returns (and sets Essbase{STATUS} to):
-    #
-    #   $MAXL_STATUS {NOERR} if execution was successful.  There are likely
-    #      to be informational and feedback massages on the message stack,
-    #      which may be obtained with the pop_msg() method below.
-    #
-    #   $MAXL_STATUS {ERROR} if there was a user error.  The numbers of
-    #      the encountered errors, their levels and texts may be obtained
-    #      with the pop_msg method below.  Note, that there's likely to
-    #      be informational messages on the message stack even in if
-    #      execution was successful.  These also may be obtained via the
-    #      pop_msg call below.
-    #
+    """-------------------------------- do ------------------------------------
+    
+    Performs a MaxL statement.
+    
+    Arguments:
+      Statement. Required. A string containing a MaxL statement to be
+                           passed to the server.
+    
+    Returns (and sets Essbase{STATUS} to):
+    
+      $MAXL_STATUS {NOERR} if execution was successful.  There are likely
+         to be informational and feedback massages on the message stack,
+         which may be obtained with the pop_msg() method below.
+    
+      $MAXL_STATUS {ERROR} if there was a user error.  The numbers of
+         the encountered errors, their levels and texts may be obtained
+         with the pop_msg method below.  Note, that there's likely to
+         be informational messages on the message stack even in if
+         execution was successful.  These also may be obtained via the
+         pop_msg call below.
+    """
     def do(self, statement):
-        sid, ssnInit = self.sid, self.ssnInit
-        if not (sid and ssnInit):
+        if not (self.sid and self.ssnInit):
             return MAXL_MSGLVL_SESSION
 
         # execute the statement command
         if ESS_UTF:
-            sts = maxl.MaxLExec(sid, c_char_p(statement), c_ulong(MAXL_OPMODE_UTF))
+            self.sts = self.maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_UTF))
         else:
-            sts = maxl.MaxLExec(sid, c_char_p(statement), c_ulong(MAXL_OPMODE_DEFAULT))
-        self.sts = sts
-        self.bMdxQuery = self.is_mdx()
+            self.sts = self.maxl.MaxLExec(self.sid, c_char_p(statement.encode('utf-8')), c_ulong(MAXL_OPMODE_DEFAULT))
 
-        if self.bMdxQuery:
+        if self.is_mdx():
             numFlds = c_long(0)
             numRows = c_long(0)
-            sts = maxl.MaxlMDXOutputSize(sid, byref(numFlds), byref(numRows))
-            self.sts = sts
-            if sts > MAXL_MSGLVL_ERROR:
+            self.sts = self.maxl.MaxlMDXOutputSize(self.sid, byref(numFlds), byref(numRows))
+            
+            if self.sts > MAXL_MSGLVL_ERROR:
                 self.numFlds = None
                 self.numRows = None
             else:
                 self.numFlds = int(numFlds.value)
                 self.numRows = int(numRows.value)
         else:
-            if sts > MAXL_MSGLVL_ERROR:
+            if self.sts > MAXL_MSGLVL_ERROR:
                 self.numFlds = None
             else:
                 self.numFlds = self.ssnInit.ExecArity
 
-        return sts
+        return self.sts
 
-    #---------------------------- pop_msg -----------------------------------#
-    #
-    # Pops next Essbase or MaxL status message from MaxL message stack.
-    #
-    # Each invocation of the "do" method above results in a stack of status
-    # messages.  This stack is unwound by repeatedly calling this function
-    # until it returns nothing.  It's okay for a program to ignore the
-    # message stack, or only unwind it partially.  The next call to "do" will
-    # clear left-over messages.
-    #
-    # There is likely to be a number of messages on the stack even after a
-    # successful execution.  In most cases, a program will only need
-    # to know if the execution of the last "do" was successful, which is
-    # indicated by the return value from "do".
-    #
-    # When the message stack is empty the return list elements are undefined
-    # and Essbase{STATUS} is set to $MAXL_STATUS{END_OF_DATA}.
-    #
-    # Arguments: None
-    #
-    # Returns: List of form:
-    #   (<message_number>, <message_level>, <message_text>)
-    #
+    """---------------------------- pop_msg -----------------------------------
+    
+    Pops next Essbase or MaxL status message from MaxL message stack.
+    
+    Each invocation of the "do" method above results in a stack of status
+    messages.  This stack is unwound by repeatedly calling this function
+    until it returns nothing.  It's okay for a program to ignore the
+    message stack, or only unwind it partially.  The next call to "do" will
+    clear left-over messages.
+    
+    There is likely to be a number of messages on the stack even after a
+    successful execution.  In most cases, a program will only need
+    to know if the execution of the last "do" was successful, which is
+    indicated by the return value from "do".
+    
+    When the message stack is empty the return list elements are undefined
+    and Essbase{STATUS} is set to $MAXL_STATUS{END_OF_DATA}.
+    
+    Arguments: None
+    
+    Returns: List of form:
+      (<message_number>, <message_level>, <message_text>)
+    """
     def pop_msg(self):
-        sid, ssnInit, sts = self.sid, self.ssnInit, self.sts
-        if not (sid and ssnInit):
+        if not (self.sid and self.ssnInit):
             return None, None, None
 
         msgno = msglevel = arity = 0
-        oldSts = self.sts
         done = False
         getAnotherMessage = True
 
         while getAnotherMessage:
             msgstr = ''
-            if oldSts <= MAXL_MSGLVL_ERROR:
+            if self.sts <= MAXL_MSGLVL_ERROR:
                 msgno, msglevel, msgstr, arity = self.ssnInit.MsgNumber, self.ssnInit.MsgLevel, self.ssnInit.MsgText, self.ssnInit.ExecArity
                 if not (not arity and msgno == MAXL_MSGNO_COL_PREP_NUM):
                     getAnotherMessage = False
                 else:
                     getAnotherMessage = True
-            elif oldSts == MAXL_MSGLVL_END_OF_DATA:
+            elif self.sts == MAXL_MSGLVL_END_OF_DATA:
                 done = True
                 getAnotherMessage = False
 
             if not done:
-                sts = maxl.MaxLMessageFetch(sid)
+                self.sts = self.maxl.MaxLMessageFetch(self.sid)
                 if getAnotherMessage:
                     msgno = msglevel = arity = 0
-                    oldSts = sts
 
-        self.sts = sts
-        if sts > MAXL_MSGLVL_ERROR and sts != MAXL_MSGLVL_END_OF_DATA:
+        if self.sts > MAXL_MSGLVL_ERROR and self.sts != MAXL_MSGLVL_END_OF_DATA:
             msgno, msglevel, msgstr = None, None, None
 
         return msgno, msglevel, msgstr
 
-    #------------------------- fetch_desc ------------------------------#
-    #
-    # Returns reference to list of column names in the output table
-    # and a reference to the list of column types in the output table.
-    #
+    """------------------------- fetch_desc ------------------------------
+    
+    Returns reference to list of column names in the output table
+    and a reference to the list of column types in the output table.
+    """
     def fetch_desc(self):
         col_names = []
         col_types = []
 
-        sid, numFlds, numRows, bMdxQuery = self.sid, self.numFlds, self.numRows, self.bMdxQuery
-        if not sid:
+        if not self.sid:
             return MAXL_MSGLVL_SESSION
 
-        if not numFlds:
+        if not self.numFlds:
             return tuple(col_names), tuple(col_types)
 
-        if bMdxQuery:
+        if self.is_mdx():
             pHeader_t = POINTER(maxl_mdxoutputheader_t)
             pHeader = pHeader_t()
-            sts = maxl.MaxlMDXOutputDescribe(sid, byref(pHeader))
-            if sts < MAXL_MSGLVL_ERROR:
-                for index in range(numFlds):
+            self.sts = self.maxl.MaxlMDXOutputDescribe(self.sid, byref(pHeader))
+            if self.sts < MAXL_MSGLVL_ERROR:
+                for index in range(self.numFlds):
                     col_names.append(pHeader[index].sName)
                     col_types.append(pHeader[index].Type)
         else:
-            col_array = maxl_column_descr_t * numFlds
+            col_array = maxl_column_descr_t * self.numFlds
             cols = col_array()
-            sts = maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(cols))
-            if sts < MAXL_MSGLVL_ERROR:
-                for index in range(numFlds):
+            self.sts = self.maxl.MaxLOutputDescribe(self.sid, c_ulong(1), c_ulong(self.numFlds), byref(cols))
+            if self.sts < MAXL_MSGLVL_ERROR:
+                for index in range(self.numFlds):
                     col_names.append(cols[index].Name)
                     col_types.append(cols[index].IntTyp)
 
         return tuple(col_names), tuple(col_types)
 
-    #------------------------- fetch_row ------------------------------#
-    #
-    # Returns a reference to a row of query results in output table as a
-    # list and a reference to the data types of the query result values
-    # as a list.
-    # Essbase->{STATUS} is set to either $MAXL_STATUS{NOERR}, on
-    # success, or $MAXL_STATUS{END_OF_DATA}, if there were no rows to
-    # fetch, or $MAXL_STATUS{ERROR} if a user error has occured.
-    #
-    # A row of record is defined as
-    #    { val[0], val[1], ... , val[NUM_OF_FIELDS-1] } }
-    # Row numbers are counted cardinally from 0:
-    #
+    """------------------------- fetch_row ------------------------------
+    
+    Returns a reference to a row of query results in output table as a
+    list and a reference to the data types of the query result values
+    as a list.
+    Essbase->{STATUS} is set to either $MAXL_STATUS{NOERR}, on
+    success, or $MAXL_STATUS{END_OF_DATA}, if there were no rows to
+    fetch, or $MAXL_STATUS{ERROR} if a user error has occured.
+    
+    A row of record is defined as
+       { val[0], val[1], ... , val[NUM_OF_FIELDS-1] } }
+    Row numbers are counted cardinally from 0:
+    """
     def fetch_row(self):
         row = []
-        sid, ssnInit, numFlds, bMdxQuery = self.sid, self.ssnInit, self.numFlds, self.bMdxQuery
-        if not (sid and ssnInit):
+        
+        if not (self.sid and self.ssnInit):
             return MAXL_MSGLVL_SESSION
 
-        if not numFlds:
+        if not self.numFlds:
             return row
 
-        if bMdxQuery:
-            sts, row = self._MaxlMDXOutputNextRecord(sid, numFlds)
+        if self.bMdxQuery:
+            self.sts, row = self._MaxlMDXOutputNextRecord(self.sid, self.numFlds)
         else:
-            sts, row = self._MaxlOutputNextRecord(sid, ssnInit, numFlds)
+            self.sts, row = self._MaxlOutputNextRecord(self.sid, self.ssnInit, self.numFlds)
 
-        if sts == MAXL_MSGLVL_END_OF_DATA:
-            sts = MAXL_MSGLVL_SUCCESS
+        if self.sts == MAXL_MSGLVL_END_OF_DATA:
+            self.sts = MAXL_MSGLVL_SUCCESS
 
-        self.sts = sts
         return row
 
-    #----------------------- _MaxlOutputNextRecord --------------------#
+    """----------------------- _MaxlOutputNextRecord --------------------"""
     def _MaxlOutputNextRecord(self, sid, ssnInit, numFlds):
         row = []
         pDescr = maxl_column_descr_t()
@@ -391,7 +386,7 @@ class Essbase:
                         ('pszVal', col_t * MAX_REC),
                         ('puVal', c_ulonglong * MAX_REC)]
 
-        sts = maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(pOutputDescrs))
+        sts = self.maxl.MaxLOutputDescribe(sid, c_ulong(1), c_ulong(numFlds), byref(pOutputDescrs))
 
         if sts < MAXL_MSGLVL_ERROR:
             buffer_array = output_buffer * numFlds
@@ -399,7 +394,7 @@ class Essbase:
 
             # memset(pOutputArray, 0, sizeof(pOutputArray))
             ppOutputArray = (c_char * sizeof(pOutputArray)).from_address(addressof(pOutputArray))
-            ppOutputArray.value = '\0' * sizeof(pOutputArray)
+            ppOutputArray.value = b'\0' * sizeof(pOutputArray)
 
             for index in range(numFlds):
                 pBuffer = pOutputArray[index]
@@ -422,12 +417,12 @@ class Essbase:
                     Type = MAXL_DTEXT_ULONG64
                     Size = 0
 
-                sts = maxl.MaxLColumnDefine(sid, c_ulong(index + 1), pInBuff, c_ushort(Size), c_ulong(Type), c_ushort(MAX_REC), None, None)
+                sts = self.maxl.MaxLColumnDefine(sid, c_ulong(index + 1), pInBuff, c_ushort(Size), c_ulong(Type), c_ushort(MAX_REC), None, None)
                 if sts >= MAXL_MSGLVL_ERROR:
                     pOutputDescrs = pOutputArray = None
                     return sts, None
 
-            sts = maxl.MaxLOutputFetch(sid, c_ulong(MAXL_OPMODE_DEFAULT))
+            sts = self.maxl.MaxLOutputFetch(sid, c_ulong(MAXL_OPMODE_DEFAULT))
             if sts == MAXL_MSGLVL_ERROR or sts == MAXL_MSGLVL_END_OF_DATA:
                 return sts, None
             elif sts > MAXL_MSGLVL_ERROR:
@@ -450,19 +445,19 @@ class Essbase:
         pOutputArray = None
         return sts, row
 
-    #-------------------- _MaxlMDXOutputNextRecord --------------------#
-    #
-    # Description
-    #   Returns pOutput->ulCurRow'th row of output data.
-    #
-    # Parameters
-    #   SessionId- in    - MaxL Session id.
-    #   ppRecord - out   - Pointer to the buffer which receives the record
-    #                      values.
-    #
-    # Returns
-    #   MAXL_NOERR, MAXL_END_OF_DATA, MAXL_ERROR.
-
+    """-------------------- _MaxlMDXOutputNextRecord --------------------
+    
+    Description
+      Returns pOutput->ulCurRow'th row of output data.
+    
+    Parameters
+      SessionId- in    - MaxL Session id.
+      ppRecord - out   - Pointer to the buffer which receives the record
+                          values.
+    
+    Returns
+      MAXL_NOERR, MAXL_END_OF_DATA, MAXL_ERROR.
+    """
     def _MaxlMDXOutputNextRecord(self, sid, numFlds):
         row = []
         pHeader_t = POINTER(maxl_mdxoutputheader_t)
@@ -473,9 +468,9 @@ class Essbase:
         ppRecordAry = ESS_PVOID_T * numFlds
         ppRecord = ppRecordAry()
 
-        sts = maxl.MaxlMDXOutputNextRecord(sid, ppRecord)
+        sts = self.maxl.MaxlMDXOutputNextRecord(sid, ppRecord)
         if sts == MAXL_MSGLVL_SUCCESS:
-            sts = maxl.MaxlMDXOutputDescribe(sid, byref(pHeader))
+            sts = self.maxl.MaxlMDXOutputDescribe(sid, byref(pHeader))
             if sts == MAXL_MSGLVL_SUCCESS:
                 for index in range(numFlds):
                     fldType = pHeader[index].Type
@@ -496,43 +491,41 @@ class Essbase:
 
         return sts, row
 
-    #----------------------------- is_mdx -------------------------------#
-    #
-    # This function can be called after a call to do() in case different
-    # output processing is desired for mdx query output than from
-    # MaxL command output
-    #
+    """----------------------------- is_mdx -------------------------------
+    
+    This function can be called after a call to do() in case different
+    output processing is desired for mdx query output than from
+    MaxL command output
+    """
     def is_mdx(self):
-        sid, ssnInit, sts = self.sid, self.ssnInit, self.sts
-        if not (sid and ssnInit):
+        if not (self.sid and self.ssnInit):
             return None
 
-        return ssnInit.bMdxQuery
+        return self.ssnInit.bMdxQuery
 
-    #----------------------------- disconnect -------------------------------#
-    #
-    # Terminates a MaxL session and the associated Essbase session.
-    #
+    """----------------------------- disconnect -------------------------------
+    
+    Terminates a MaxL session and the associated Essbase session.
+    """
     def disconnect(self):
-        sid = self.sid
-        if not sid:
+        if not self.sid:
             return MAXL_MSGLVL_SESSION
 
-        sts = maxl.MaxLSessionDestroy(sid)
+        self.sts = self.maxl.MaxLSessionDestroy(self.sid)
 
-        if sts < MAXL_MSGLVL_ERROR:
+        if self.sts < MAXL_MSGLVL_ERROR:
             self.user = None
             self.sid = None
             self.ssnInit = None
             self.numFlds = None
             self.sts = None
 
-        return sts
+        return self.sts
 
-    # -------------------------------- rows ----------------------------------#
-    #
-    # Generator that loops through output returned by Essbase 
-    #
+    """-------------------------------- rows ----------------------------------
+    
+    Generator that loops through output returned by Essbase 
+    """
     def rows(self, value=None):
         if not self.numFlds:
             raise StopIteration
@@ -546,15 +539,16 @@ class Essbase:
                 raise
             except Exception as e:
                 value = e
+                raise
 
-    # --------------------------------- tdf ---------------------------------#
-    #
-    # Returns a result set in the form of a tab-delimited file.
-    #
+    """--------------------------------- tdf ---------------------------------
+    
+    Returns a result set in the form of a tab-delimited file.
+    """
     def tdf(self):
         # setup the header
         name, dt = self.fetch_desc()
-        tbl = "\t".join(name) + "\n"
+        tbl = "\t".join([x.decode() for x in name]) + "\n"
         line = ['-' * len(column) for column in name]
         tbl = tbl + "\t".join(line) + "\n"
 
@@ -569,7 +563,10 @@ class Essbase:
                     else:
                         record.append('TRUE')
                 else:
-                    record.append(str(column))
+                    if type(column) == bytes:
+                        record.append(column.decode())
+                    else:
+                        record.append(str(column))
                 idx += 1
             tbl = tbl + "\t".join(record) + "\n"
 
@@ -577,10 +574,10 @@ class Essbase:
 
         return tbl
 
-    # -------------------------------- msgs ----------------------------------#
-    #
-    # Returns a message list that resulted from executing a MaxL statement.
-    #
+    """-------------------------------- msgs ----------------------------------
+    
+    Returns a message list that resulted from executing a MaxL statement.
+    """
     def msgs(self, output=sys.stdout):
 
         msgno, level, msg = self.pop_msg()
@@ -597,15 +594,15 @@ class Essbase:
                 msglvl = "FATAL"
             else:
                 msglvl = str(level)
-            print >> output, "%8s - %7d - %s." % (msglvl, msgno, msg)
+            print ("%8s - %7d - %s." % (msglvl, msgno, msg.decode()))
             msgno, level, msg = self.pop_msg()
 
-        print >> output,''
+        print ('')
 
-    # ------------------------------- execute -------------------------------#
-    #
-    # Execute a MaxL statement and print resulting output.
-    #
+    """------------------------------- execute -------------------------------
+    
+    Execute a MaxL statement and print resulting output.
+    """
     def execute(self, stmt, output=sys.stdout, timefmt=None):
         # format MaxL statement for output
         stmt = stmt.replace("\t", "")
@@ -616,8 +613,9 @@ class Essbase:
             timestamp = time.strftime(timefmt)
         else:
             timestamp = time.asctime()
-        print >> output, timestamp
-        print >> output, "MAXL> %s;\n" % "\n".join(out)
+        
+        print (timestamp)
+        print ("MAXL> %s;\n" % "\n".join(out))
 
         # execute MaxL statement
         sts = self.do(stmt)
@@ -627,9 +625,9 @@ class Essbase:
             # dump status messages
             self.msgs(output)
 
-            print >> output, "Execution of [%s] failed with status %d" % (stmt, sts)
+            print ("Execution of [%s] failed with status %d" % (stmt, sts))
         elif self.numFlds:
-            print >> output, self.tdf()
+            print (self.tdf())
 
         # dump status messages
         self.msgs(output)
