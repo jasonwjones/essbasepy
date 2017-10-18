@@ -24,8 +24,8 @@ MAXL_MSGTEXT_LEN            = ((MAXL_MSGTEXT_LEN_NATIVE * ESS_BYTES_PER_CHARACTE
 MAXL_COLUMN_NAME_LEN_NATIVE = 64
 MAXL_COLUMN_NAME_LEN        = ((MAXL_COLUMN_NAME_LEN_NATIVE * ESS_BYTES_PER_CHARACTER) + ESS_BYTES_FOR_TRAILING_NULL)
 MAXL_MSGNO_COL_PREP_NUM     = 1241045
-# has to be set later depending on the version of the DLL
-#MAXL_MDXCELLSTRSZ           = 1024 + 3
+# has to be set later depending on the version of the DLL, this is the standard value for version 11.1.2.4
+MAXL_MDXCELLSTRSZ           = 1024 + 3
 
 # Return codes as defined in maxldefs.h
 MAXL_MSGLVL_SUCCESS     = 0
@@ -75,7 +75,7 @@ def getFileVerInfo(FileName):
     RAWdata = FileHandle.read().replace(b"\x00",b"")
     FileHandle.close()
 
-    Info = re.findall( b"FileVersion"+b"(.+?)\x01", RAWdata )
+    Info = re.findall(b"FileVersion"+b"(.+?)\x01", RAWdata )
     if Info == []:
         return None
     else:
