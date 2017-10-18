@@ -4,6 +4,7 @@ import time
 import sys
 import platform
 import os
+import re
 
 BIT64 = platform.architecture()[0] == '64bit'
 
@@ -23,7 +24,8 @@ MAXL_MSGTEXT_LEN            = ((MAXL_MSGTEXT_LEN_NATIVE * ESS_BYTES_PER_CHARACTE
 MAXL_COLUMN_NAME_LEN_NATIVE = 64
 MAXL_COLUMN_NAME_LEN        = ((MAXL_COLUMN_NAME_LEN_NATIVE * ESS_BYTES_PER_CHARACTER) + ESS_BYTES_FOR_TRAILING_NULL)
 MAXL_MSGNO_COL_PREP_NUM     = 1241045
-MAXL_MDXCELLSTRSZ           = 1024 + 3
+# has to be set later depending on the version of the DLL
+#MAXL_MDXCELLSTRSZ           = 1024 + 3
 
 # Return codes as defined in maxldefs.h
 MAXL_MSGLVL_SUCCESS     = 0
@@ -63,6 +65,21 @@ MAX_COL = 1024  # maximum column size
 
 ESS_PVOID_T = c_void_p
 ESS_PPVOID_T = POINTER(ESS_PVOID_T)
+
+def getFileVerInfo(FileName):
+    """
+    returns the file information from EXE and DLL.
+    stripped version from https://www.python-forum.de/viewtopic.php?t=2306
+    """
+    FileHandle = open( FileName, "rb" )
+    RAWdata = FileHandle.read().replace(b"\x00",b"")
+    FileHandle.close()
+
+    Info = re.findall( b"FileVersion"+b"(.+?)\x01", RAWdata )
+    if Info == []:
+        return None
+    else:
+        return Info[0][:-2]
 
 class maxl_instinit_t(Structure):
     _fields_ = [('MsgText', (c_char * MAXL_MSGTEXT_LEN)),
@@ -164,6 +181,10 @@ class Essbase:
         __maxldll = find_library('essmaxlu')
         if __maxldll:
             print ("Using Maxl DLL in {DLLpath}".format(DLLpath = __maxldll))
+            if "11.1.2.4" in (getFileVerInfo(__maxldll)):
+                MAXL_MDXCELLSTRSZ           = 1024 + 3
+            else:
+                MAXL_MDXCELLSTRSZ           = 1024
             self.maxl = cdll.LoadLibrary(__maxldll)
         else:
             print ("maxl DLL not found")
