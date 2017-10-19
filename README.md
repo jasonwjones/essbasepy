@@ -60,6 +60,10 @@ Ensure that the Essbase runtime client folder containing the MaxL dll is in your
 
 ## History
 
+### October 19, 2017
+
+* Add enhancement to autodetect Essbase version and update an internal setting if needed. This should fix some instances where the wrapper worked fine for 11.1.2.4 but did not work out of the box for previous versions
+
 ### March 10, 2016
 
 * HUGE number of update to cleanup Essbasepy for Python 3 and otherwise cleanup the code significantly
