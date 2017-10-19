@@ -18,7 +18,7 @@ essbasepy files have now been consolidated down to a single distribution file. T
 4. Test using one or more of the supplied sample Essbase/Python scripts.
 
 
-## Installation Sequence for 11.1.2.3
+## Installation Sequence for 11.1.2.3/11.1.2.4
 
 It took me awhile to get essbasepy to work on my Windows 2008 R2 64-bit server with Essbase (EPM) 11.1.2.3. After digging in, a solid sequence for getting essbasepy to work appears to be as follows. This assumes that your OS is 64-bit, and the Essbase/EPM software is 64-bit. 
 
