@@ -181,7 +181,7 @@ class Essbase:
         __maxldll = find_library('essmaxlu')
         if __maxldll:
             print ("Using Maxl DLL in {DLLpath}".format(DLLpath = __maxldll))
-            if "11.1.2.4" in (getFileVerInfo(__maxldll)):
+            if b"11.1.2.4" in (getFileVerInfo(__maxldll)):
                 MAXL_MDXCELLSTRSZ           = 1024 + 3
             else:
                 MAXL_MDXCELLSTRSZ           = 1024
